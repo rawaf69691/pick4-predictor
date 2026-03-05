@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick 4 Prediction Engine</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+display:flex;
+justify-content:center;
+padding:40px;
+}
+
+.container{
+width:600px;
+background:#111827;
+padding:30px;
+border-radius:14px;
+box-shadow:0 0 30px rgba(0,0,0,0.5);
+}
+
+h1{
+text-align:center;
+color:#38bdf8;
+}
+
+select,button{
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:none;
+font-size:16px;
+}
+
+button{
+background:#38bdf8;
+color:black;
+font-weight:bold;
+cursor:pointer;
+}
+
+.result{
+margin-top:20px;
+padding:12px;
+background:#1f2937;
+border-radius:8px;
+}
+
+.number{
+font-size:22px;
+font-weight:bold;
+}
+
+.box{
+font-size:12px;
+color:#94a3b8;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Pick 4 Predictor</h1>
+
+<p id="today"></p>
+
+<label>Draw</label>
+<select id="drawType">
+<option value="midday">Midday</option>
+<option value="evening">Evening</option>
+</select>
+
+<label>Play Amount</label>
+<select id="bet">
+<option value="1">$1</option>
+<option value="0.5">$0.50</option>
+</select>
+
+<button onclick="predict()">Generate Predictions</button>
+
+<div id="results"></div>
+
+</div>
+
+<script>
+
+document.getElementById("today").innerText =
+"Predictions for " + new Date().toDateString()
+
+let engineData
+
+fetch("pick4_prediction_engine.json")
+.then(res=>res.json())
+.then(data=>{
+engineData=data
+})
+
+function classifyBox(num){
+
+let counts={}
+
+for(let d of num){
+counts[d]=(counts[d]||0)+1
+}
+
+let values=Object.values(counts)
+
+if(values.includes(4)) return "1-Way (AAAA)"
+if(values.includes(3)) return "4-Way (AAAB)"
+
+if(values.length==2 && values.includes(2))
+return "6-Way (AABB)"
+
+if(values.length==3)
+return "12-Way (AABC)"
+
+return "24-Way (ABCD)"
+}
+
+function scoreNumber(num,stats){
+
+let digits=num.split("")
+
+let score=0
+
+digits.forEach(d=>{
+let f=stats.digit_frequency.find(x=>x[0]==d)
+if(f) score+=f[1]
+})
+
+let pairs=[
+digits[0]+digits[1],
+digits[1]+digits[2],
+digits[2]+digits[3]
+]
+
+pairs.forEach(p=>{
+let f=stats.pair_frequency.find(x=>x[0]==p)
+if(f) score+=f[1]
+})
+
+let box=num.split("").sort().join("")
+
+let f=stats.box_frequency.find(x=>x[0]==box)
+
+if(f) score+=f[1]
+
+return score
+}
+
+function predict(){
+
+let draw=document.getElementById("drawType").value
+
+let stats=engineData[draw]
+
+let scores=[]
+
+for(let i=0;i<10000;i++){
+
+let num=i.toString().padStart(4,"0")
+
+let s=scoreNumber(num,stats)
+
+scores.push({num:num,score:s})
+
+}
+
+scores.sort((a,b)=>b.score-a.score)
+
+let top=scores.slice(0,5)
+
+let html=""
+
+top.forEach((n,i)=>{
+
+html+=`
+<div class="result">
+<div class="number">#${i+1} ${n.num}</div>
+<div class="box">${classifyBox(n.num)}</div>
+</div>
+`
+
+})
+
+document.getElementById("results").innerHTML=html
+
+}
+
+</script>
+
+</body>
+</html>

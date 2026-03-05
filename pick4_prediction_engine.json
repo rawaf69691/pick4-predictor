@@ -1,0 +1,12 @@
+{
+  "midday": {
+    "digit_frequency": [],
+    "pair_frequency": [],
+    "box_frequency": []
+  },
+  "evening": {
+    "digit_frequency": [],
+    "pair_frequency": [],
+    "box_frequency": []
+  }
+}
