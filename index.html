@@ -777,17 +777,19 @@
             if (!container) return;
             container.innerHTML = '';
 
+            const draw = document.getElementById('drawCycle')?.value || 'midday';
+
             if (currentTab === 'straight') {
                 const grid = document.createElement('div');
                 grid.className = 'results-grid';
-                const draw = document.getElementById('drawCycle')?.value || 'midday';
                 
+                // This part now uses your REAL 30-year Florida data
                 if (engineData && engineData[draw]) {
                     engineData[draw].top_picks.forEach((pick, i) => {
                         grid.innerHTML += `
                             <div class="card">
                                 <div class="card-header">
-                                    <span class="rank">#${i + 1} PRIORITY</span>
+                                    <span class="rank">PRIORITY #${i + 1}</span>
                                     <span class="confidence">${pick.score}% CONFIDENCE</span>
                                 </div>
                                 <div class="number-display">${pick.number}</div>
@@ -798,6 +800,25 @@
                         `;
                     });
                 } else {
+                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--muted);">Loading Florida Pattern Engine...</div>';
+                }
+                container.appendChild(grid);
+
+            } else if (currentTab === 'grade') {
+                // Keep the Grading Panel code exactly as Google AI Studio wrote it
+                container.innerHTML = `
+                    <div class="glass-panel grading-container">
+                        <h3 style="text-align: center; color: var(--accent);">Post-Draw Analysis</h3>
+                        <div class="grading-input-wrap">
+                            <input type="text" id="winNum" maxlength="4" placeholder="0000">
+                            <button class="primary-btn" onclick="analyzeGrade()">Analyze</button>
+                        </div>
+                        <div id="analysis-output" class="analysis-result"></div>
+                    </div>
+                `;
+            }
+            // ... (Rest of the tabs for History and Box follow here)
+        } else {
                     for (let i = 1; i <= 5; i++) {
                         grid.innerHTML += `
                             <div class="card">
@@ -911,3 +932,4 @@
 
 </body>
 </html>
+
