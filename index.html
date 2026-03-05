@@ -581,10 +581,59 @@
 
     // This makes sure the "Analyze" button works when clicked
     document.querySelector('.primary-btn').onclick = runPrediction;
+    function analyzeNewWinner() {
+        const winNum = document.getElementById('winNum').value;
+        const output = document.getElementById('analysis-output');
+        
+        if(winNum.length !== 4) {
+            alert("Please enter a 4-digit number.");
+            return;
+        }
+
+        const draw = document.getElementById('drawCycle').value;
+        const picks = engineData[draw].top_picks.map(p => p.number);
+        const winArr = winNum.split('');
+        
+        let html = `<div style="margin-bottom: 12px; font-weight: 600; font-size: 14px; color: var(--accent);">Comparison vs. Top Picks:</div>`;
+        
+        picks.forEach(pred => {
+            const predArr = pred.split('');
+            let exactHits = 0;
+            
+            // Checking for a Straight Hit
+            for(let i=0; i<4; i++) if(predArr[i] === winArr[i]) exactHits++;
+            
+            // Checking for a Box Hit
+            const winSorted = [...winArr].sort().join('');
+            const predSorted = [...predArr].sort().join('');
+            const isBoxHit = winSorted === predSorted;
+
+            let statusText = 'No Match';
+            let color = 'var(--muted)';
+            
+            if (exactHits === 4) {
+                statusText = '🎯 STRAIGHT HIT!';
+                color = 'var(--success)';
+            } else if (isBoxHit) {
+                statusText = '📦 BOX HIT';
+                color = 'var(--secondary)';
+            }
+
+            html += `
+                <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; margin-bottom: 5px;">
+                    <span style="font-family: monospace; letter-spacing: 2px;">${pred}</span>
+                    <span style="color: ${color}; font-weight: bold; font-size: 12px;">${statusText}</span>
+                </div>
+            `;
+        });
+
+        output.innerHTML = html;
+    }
 </script>
 
 </body>
 </html>
+
 
 
 
