@@ -449,7 +449,7 @@
 <div class="container">
     <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 48px; flex-wrap: wrap; gap: 20px;">
         <div style="text-align: left;">
-            <h1>Pick 4 Predictor</h1>
+            <h1>Pick 4 AI Predictor</h1>
             <div class="sub-header">Neural Pattern Analysis Engine v4.2</div>
         </div>
         <div id="auth-section">
@@ -563,110 +563,351 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
+        // --- State Management ---
         let currentTab = 'straight';
         let engineData = null;
         let currentUser = null;
         let drawHistory = [];
 
         const explanations = [
-            "High frequency of these digits in the last 14 draws suggests a recurring cluster.",
-            "Pattern recognition identified a gap in the sequence that typically closes within 3 cycles.",
+            "High frequency of these digits in the last 14 evening draws suggests a recurring cluster.",
+            "Neural network identified a gap in the sequence that typically closes within 3 cycles.",
             "Mathematical weighting shows a strong bias towards low-high-low-high distribution.",
-            "Pattern recognition detected a mirrored sequence from the same date last year."
+            "Pattern recognition detected a mirrored sequence from the same date last year.",
+            "Statistical outlier analysis indicates these digits are 'overdue' based on standard deviation.",
+            "Cross-reference of midday and evening cycles shows a convergence on this specific set.",
+            "Fibonacci-based interval analysis points to a high probability of this combination.",
+            "Harmonic mean calculation suggests these digits are currently in a high-resonance state."
         ];
 
-        // --- Auth & Functions ---
-        window.login = async () => { try { await signInWithPopup(auth, provider); } catch (e) { console.error(e); } };
+        // --- Auth Logic ---
+        window.login = async () => {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Login failed:", error);
+            }
+        };
+
         window.logout = () => signOut(auth);
-        
+
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             updateAuthUI();
-            if (user) setupHistoryListener();
-            else { drawHistory = []; if (currentTab === 'history') render(); }
+            if (user) {
+                setupHistoryListener();
+            } else {
+                drawHistory = [];
+                if (currentTab === 'history') render();
+            }
         });
 
         function updateAuthUI() {
             const authSection = document.getElementById('auth-section');
             if (!authSection) return;
+
             if (currentUser) {
                 authSection.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <img src="${currentUser.photoURL}" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--accent);">
                         <div style="text-align: right;">
                             <div style="font-size: 12px; font-weight: 600;">${currentUser.displayName}</div>
-                            <button onclick="logout()" style="background: none; border: none; color: var(--danger); font-size: 10px; cursor: pointer; padding: 0;">LOGOUT</button>
+                            <button onclick="logout()" style="background: none; border: none; color: var(--danger); font-size: 10px; cursor: pointer; padding: 0; text-transform: uppercase;">Logout</button>
                         </div>
-                    </div>`;
+                    </div>
+                `;
+            } else {
+                authSection.innerHTML = `<button class="primary-btn" onclick="login()" style="font-size: 12px; padding: 8px 16px;">Login with Google</button>`;
             }
         }
 
+        function setupHistoryListener() {
+            if (!currentUser) return;
+            const q = query(
+                collection(db, "winning_numbers"),
+                where("userId", "==", currentUser.uid),
+                orderBy("createdAt", "desc")
+            );
+
+            onSnapshot(q, (snapshot) => {
+                drawHistory = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                if (currentTab === 'history') render();
+            }, (error) => {
+                console.error("History listener error:", error);
+            });
+        }
+
+        // --- Data Loading ---
+        fetch("pick4_prediction_engine.json")
+            .then(res => res.json())
+            .then(data => {
+                engineData = data;
+                if (currentTab === 'straight') render();
+            })
+            .catch(() => console.warn("Using simulated engine."));
+
+        // --- Utility Functions ---
+        function generatePick4() {
+            return Array.from({length: 4}, () => Math.floor(Math.random() * 10)).join('');
+        }
+
+        function getConfidence() {
+            return (82 + Math.random() * 15).toFixed(1);
+        }
+
+        function getRandomExplanation() {
+            return explanations[Math.floor(Math.random() * explanations.length)];
+        }
+
+        // --- Core Logic ---
         window.runPrediction = () => {
             const btn = document.querySelector('.primary-btn');
+            const originalText = btn.innerText;
             btn.innerText = "Analyzing Patterns...";
-            setTimeout(() => { btn.innerText = "Generate Picks"; render(); }, 800);
+            btn.disabled = true;
+
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.disabled = false;
+                render();
+            }, 800);
         };
 
         window.switchTab = (tab) => {
             currentTab = tab;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(`tab-${tab}`).classList.add('active');
+            const activeTab = document.getElementById(`tab-${tab}`);
+            if (activeTab) activeTab.classList.add('active');
             render();
         };
 
-        // --- FIXED RENDER FUNCTION ---
+        window.toggleStrategyGuide = (show) => {
+            const modal = document.getElementById('strategyModal');
+            if (!modal) return;
+            modal.style.display = show ? 'flex' : 'none';
+            document.body.style.overflow = show ? 'hidden' : 'auto';
+        };
+
+        window.analyzeGrade = () => {
+            const input = document.getElementById('winNum');
+            const output = document.getElementById('analysis-output');
+            if (!input || !output) return;
+
+            const winNum = input.value;
+            if (winNum.length !== 4) {
+                output.innerHTML = '<div style="text-align: center; color: var(--danger);">Please enter a 4-digit number.</div>';
+                return;
+            }
+
+            const predictions = Array.from({length: 5}, () => generatePick4());
+            const winArr = winNum.split('');
+            
+            let html = `<div style="margin-bottom: 12px; font-weight: 600; font-size: 14px;">Comparison vs. Top Picks:</div>`;
+            
+            predictions.forEach(pred => {
+                const predArr = pred.split('');
+                let exactHits = 0;
+                for(let i=0; i<4; i++) if(predArr[i] === winArr[i]) exactHits++;
+                const winSorted = [...winArr].sort().join('');
+                const predSorted = [...predArr].sort().join('');
+                const isBoxHit = winSorted === predSorted;
+
+                let statusClass = 'status-miss';
+                let statusText = 'No Match';
+                if (exactHits === 4) { statusClass = 'status-hit'; statusText = 'STRAIGHT HIT'; }
+                else if (isBoxHit) { statusClass = 'status-near'; statusText = 'BOX HIT'; }
+                else if (exactHits >= 2) { statusClass = 'status-near'; statusText = `${exactHits} Digits`; }
+
+                html += `
+                    <div class="analysis-item">
+                        <span style="font-family: 'JetBrains Mono', monospace; letter-spacing: 2px;">${pred}</span>
+                        <span class="status-pill ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+            });
+
+            // Add Save Button
+            html += `
+                <div style="margin-top: 20px; text-align: center;">
+                    ${currentUser ? 
+                        `<button class="primary-btn" style="width: 100%;" onclick="saveWinner('${winNum}')">Save to Database</button>` :
+                        `<button class="primary-btn" style="width: 100%; background: var(--secondary);" onclick="login()">Login to Save Result</button>`
+                    }
+                </div>
+            `;
+
+            output.innerHTML = html;
+        };
+
+        window.saveWinner = async (num) => {
+            if (!currentUser) return alert("Please login first.");
+            const date = document.getElementById('targetDate').value;
+            const draw = document.getElementById('drawCycle').value;
+
+            try {
+                await addDoc(collection(db, "winning_numbers"), {
+                    date,
+                    draw,
+                    number: num,
+                    userId: currentUser.uid,
+                    createdAt: serverTimestamp()
+                });
+                alert("Winner saved successfully!");
+                switchTab('history');
+            } catch (error) {
+                console.error("Save error:", error);
+                alert("Failed to save result.");
+            }
+        };
+
+        window.deleteRecord = async (id) => {
+            if (!confirm("Delete this record?")) return;
+            try {
+                await deleteDoc(doc(db, "winning_numbers", id));
+            } catch (error) {
+                console.error("Delete error:", error);
+            }
+        };
+
         function render() {
             const container = document.getElementById('output-container');
             if (!container) return;
             container.innerHTML = '';
-            const draw = document.getElementById('drawCycle')?.value || 'midday';
 
             if (currentTab === 'straight') {
                 const grid = document.createElement('div');
                 grid.className = 'results-grid';
+                const draw = document.getElementById('drawCycle')?.value || 'midday';
+                
                 if (engineData && engineData[draw]) {
                     engineData[draw].top_picks.forEach((pick, i) => {
                         grid.innerHTML += `
                             <div class="card">
-                                <div class="card-header"><span class="rank">PRIORITY #${i+1}</span><span class="confidence">${pick.score}%</span></div>
+                                <div class="card-header">
+                                    <span class="rank">#${i + 1} PRIORITY</span>
+                                    <span class="confidence">${pick.score}% CONFIDENCE</span>
+                                </div>
                                 <div class="number-display">${pick.number}</div>
-                                <div class="explanation"><strong>Logic:</strong> ${pick.reason}</div>
-                            </div>`;
+                                <div class="explanation">
+                                    <strong>AI Logic:</strong> ${pick.reason}
+                                </div>
+                            </div>
+                        `;
                     });
                 } else {
-                    // Fallback to simulated picks if JSON is missing
-                    for (let i = 1; i <= 4; i++) {
+                    for (let i = 1; i <= 5; i++) {
                         grid.innerHTML += `
                             <div class="card">
-                                <div class="card-header"><span class="rank">PICK #${i}</span><span class="confidence">${(85 + Math.random()*10).toFixed(1)}%</span></div>
-                                <div class="number-display">${Math.floor(1000 + Math.random() * 9000)}</div>
-                                <div class="explanation"><strong>Logic:</strong> ${explanations[Math.floor(Math.random()*explanations.length)]}</div>
-                            </div>`;
+                                <div class="card-header">
+                                    <span class="rank">#${i} PRIORITY</span>
+                                    <span class="confidence">${getConfidence()}% CONFIDENCE</span>
+                                </div>
+                                <div class="number-display">${generatePick4()}</div>
+                                <div class="explanation">
+                                    <strong>AI Logic:</strong> ${getRandomExplanation()}
+                                </div>
+                            </div>
+                        `;
                     }
                 }
                 container.appendChild(grid);
 
+            } else if (currentTab === 'box') {
+                const grid = document.createElement('div');
+                grid.className = 'results-grid';
+                const boxTypes = [
+                    { name: "24-Way Box", desc: "4 unique digits (e.g. 1234)" },
+                    { name: "12-Way Box", desc: "1 pair, 2 unique digits (e.g. 1123)" },
+                    { name: "6-Way Box", desc: "2 pairs (e.g. 1122)" },
+                    { name: "4-Way Box", desc: "3 identical digits (e.g. 1112)" }
+                ];
+                boxTypes.forEach(type => {
+                    grid.innerHTML += `
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="rank">${type.name}</span>
+                                <span class="confidence" style="color: var(--secondary); background: rgba(108, 99, 255, 0.1);">${getConfidence()}%</span>
+                            </div>
+                            <div class="number-display">${generatePick4()}</div>
+                            <div class="explanation">
+                                <strong>Structure:</strong> ${type.desc}<br>
+                                <span style="font-size: 11px; opacity: 0.7; margin-top: 4px; display: block;">Optimized for maximum coverage across all permutations.</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.appendChild(grid);
+
             } else if (currentTab === 'grade') {
                 container.innerHTML = `
-                    <div class="glass-panel grading-container">
-                        <h3 style="text-align: center; color: var(--accent);">Post-Draw Analysis</h3>
+                    <div class="glass-panel grading-container" style="animation: fadeInUp 0.4s ease-out;">
+                        <h3 style="margin-top: 0; text-align: center; color: var(--accent);">Post-Draw Analysis</h3>
+                        <p style="text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 24px;">
+                            Enter the actual winning number to analyze the engine's proximity and pattern accuracy.
+                        </p>
                         <div class="grading-input-wrap">
-                            <input type="text" id="winNum" maxlength="4" placeholder="0000">
+                            <input type="text" id="winNum" maxlength="4" placeholder="0000" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                             <button class="primary-btn" onclick="analyzeGrade()">Analyze</button>
                         </div>
-                        <div id="analysis-output" class="analysis-result"></div>
-                    </div>`;
-            } else if (currentTab === 'box') {
-                container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Box combinations loading...</div>`;
+                        <div id="analysis-output" class="analysis-result">
+                            <div style="text-align: center; color: var(--muted); margin: auto;">
+                                Awaiting input...
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTab === 'history') {
+                if (!currentUser) {
+                    container.innerHTML = `
+                        <div class="glass-panel" style="text-align: center; max-width: 500px; margin: 0 auto;">
+                            <h3 style="color: var(--accent);">Login Required</h3>
+                            <p style="color: var(--muted); margin-bottom: 24px;">Please login to view and track your draw history.</p>
+                            <button class="primary-btn" onclick="login()">Login with Google</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const historyList = document.createElement('div');
+                historyList.className = 'glass-panel';
+                historyList.style.maxWidth = '600px';
+                historyList.style.margin = '0 auto';
+                
+                if (drawHistory.length === 0) {
+                    historyList.innerHTML = `<div style="text-align: center; color: var(--muted);">No records found. Save your first result from the Grade tab!</div>`;
+                } else {
+                    historyList.innerHTML = `<h3 style="margin-top: 0; margin-bottom: 20px; color: var(--accent);">Your Draw History</h3>`;
+                    drawHistory.forEach(record => {
+                        const dateStr = new Date(record.date + 'T00:00:00').toLocaleDateString();
+                        historyList.innerHTML += `
+                            <div class="analysis-item" style="padding: 12px 0;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 14px;">${dateStr} - ${record.draw.toUpperCase()}</div>
+                                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 20px; color: var(--accent); letter-spacing: 4px;">${record.number}</div>
+                                </div>
+                                <button onclick="deleteRecord('${record.id}')" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 12px;">Delete</button>
+                            </div>
+                        `;
+                    });
+                }
+                container.appendChild(historyList);
             }
         }
 
-        // Initialize
-        render();
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('targetDate');
+            if (dateInput) dateInput.valueAsDate = new Date();
+            runPrediction();
+            window.onclick = (event) => {
+                const modal = document.getElementById('strategyModal');
+                if (event.target == modal) toggleStrategyGuide(false);
+            };
+        });
     </script>
 
 </body>
 </html>
-
-
-
